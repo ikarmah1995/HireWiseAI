@@ -1,0 +1,1906 @@
+{
+  "name": "AI resume analysis real",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -6048,
+        1520
+      ],
+      "id": "5c427270-16f5-49d8-ba7f-146f420fb0d7",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V5y9nrFIU1Ihkyv6",
+          "name": "Gmail account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "=file",
+        "name": "=Resume",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1em5zmtWfLIJevq5Hc2XQWr9Y6Z6qF36L",
+          "mode": "list",
+          "cachedResultName": "AI-Powered Business Automation Original Resume",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1em5zmtWfLIJevq5Hc2XQWr9Y6Z6qF36L"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -5600,
+        112
+      ],
+      "id": "3ba8dafc-ef3a-4402-99ee-f23048aeb12a",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/drive/v2/files/{{ $json.id }}/copy?convert=true",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"mimeType\": \"application/vnd.google-apps.document\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -5152,
+        -88
+      ],
+      "id": "d57cb0bd-cffe-4243-8e08-fbb18f9ce3fd",
+      "name": "Convert to Doc",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -3800,
+        32
+      ],
+      "id": "dc46e339-d9d4-400f-a1a2-fea7a4bb7875",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "Zc56ZK6mbkjupT3E",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"name\": \"resume_screening_evaluation\",\n  \"description\": \"Analyzes a candidate's resume against a job description and outputs strengths, weaknesses, risk/reward assessment, and an overall fit score.\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"first_name\": {\n      \"type\": \"string\",\n      \"description\": \"Candidate's first name extracted from resume.\"\n    },\n    \"last_name\": {\n      \"type\": \"string\",\n      \"description\": \"Candidate's last name extracted from resume.\"\n    },\n    \"email\": {\n      \"type\": \"string\",\n      \"description\": \"Candidate's email address extracted from resume.\"\n    },\n    \"candidate_strengths\": {\n      \"type\": \"array\",\n      \"description\": \"A list of specific strengths or qualifications that match the job description.\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"candidate_weaknesses\": {\n      \"type\": \"array\",\n      \"description\": \"A list of areas where the candidate falls short or lacks alignment with the job requirements.\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"ambiguous_areas\": {\n      \"type\": \"array\",\n      \"description\": \"A list of qualifications where resume wording is unclear or generic. HR should verify these during interview.\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"risk_factor\": {\n      \"type\": \"object\",\n      \"description\": \"An evaluation of the potential risks of hiring this candidate.\",\n      \"properties\": {\n        \"score\": {\n          \"type\": \"string\",\n          \"enum\": [\"Low\", \"Medium\", \"High\"],\n          \"description\": \"The risk level of hiring this candidate.\"\n        },\n        \"explanation\": {\n          \"type\": \"string\",\n          \"description\": \"A brief explanation of the worst-case scenario if the candidate is hired.\"\n        }\n      },\n      \"required\": [\"score\", \"explanation\"]\n    },\n    \"reward_factor\": {\n      \"type\": \"object\",\n      \"description\": \"An evaluation of the potential upside of hiring this candidate.\",\n      \"properties\": {\n        \"score\": {\n          \"type\": \"string\",\n          \"enum\": [\"Low\", \"Medium\", \"High\"],\n          \"description\": \"The reward level of hiring this candidate.\"\n        },\n        \"explanation\": {\n          \"type\": \"string\",\n          \"description\": \"A description of the best-case scenario and whether the candidate is a short-term or long-term fit.\"\n        }\n      },\n      \"required\": [\"score\", \"explanation\"]\n    },\n    \"required_qualifications_met\": {\n      \"type\": \"string\",\n      \"description\": \"Format: 'X/8' showing how many required qualifications candidate meets out of total required.\"\n    },\n    \"preferred_qualifications_met\": {\n      \"type\": \"string\",\n      \"description\": \"Format: 'X/8' showing how many preferred qualifications candidate meets out of total preferred.\"\n    },\n    \"overall_fit_rating\": {\n      \"type\": \"integer\",\n      \"description\": \"A rating from 0 to 10 indicating how well the candidate matches the job description.\",\n      \"minimum\": 0,\n      \"maximum\": 10\n    },\n    \"justification_for_rating\": {\n      \"type\": \"string\",\n      \"description\": \"A summary explaining why the candidate received the specific fit rating, referencing resume and job description alignment.\"\n    }\n  },\n  \"required\": [\n    \"first_name\",\n    \"last_name\",\n    \"email\",\n    \"candidate_strengths\",\n    \"candidate_weaknesses\",\n    \"ambiguous_areas\",\n    \"risk_factor\",\n    \"reward_factor\",\n    \"required_qualifications_met\",\n    \"preferred_qualifications_met\",\n    \"overall_fit_rating\",\n    \"justification_for_rating\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -3672,
+        32
+      ],
+      "id": "4d083aa9-d7dc-4d6b-9f00-34af23344f4a",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Ah64R-au6e9w2cRbcj-adc2VjlUn3wr4Fd22xrXgCzM",
+          "mode": "list",
+          "cachedResultName": "Resume Screener",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ah64R-au6e9w2cRbcj-adc2VjlUn3wr4Fd22xrXgCzM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ah64R-au6e9w2cRbcj-adc2VjlUn3wr4Fd22xrXgCzM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.format('dd-MM-yyyy h:mm a') }}",
+            "Resume": "={{ $('Upload file').item.json.webViewLink }}",
+            "First Name": "={{ $json.output['first name'] }}",
+            "Last Name": "={{ $json.output['last name'] }}",
+            "Email": "={{ $json.output.email }}",
+            "Strengths": "={{ $('Resume Analysis Agent').item.json.output.candidate_strengths.join(\"\\n\\n\") }}",
+            "Weaknesses": "={{ $('Resume Analysis Agent').item.json.output.candidate_weaknesses.join(\"\\n\\n\") }}",
+            "Risk Factor": "={{ $('Resume Analysis Agent').item.json.output.risk_factor.score }}\n\n{{ $('Resume Analysis Agent').item.json.output.risk_factor.explanation }}",
+            "Reward Factor": "={{ $('Resume Analysis Agent').item.json.output.reward_factor.score }}\n\n{{ $('Resume Analysis Agent').item.json.output.reward_factor.explanation }}",
+            "Overall Fit": "={{ $('Resume Analysis Agent').item.json.output.overall_fit_rating }}",
+            "Justification": "={{ $('Resume Analysis Agent').item.json.output.justification_for_rating }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resume",
+              "displayName": "Resume",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Strengths",
+              "displayName": "Strengths",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Weaknesses",
+              "displayName": "Weaknesses",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Risk Factor",
+              "displayName": "Risk Factor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reward Factor",
+              "displayName": "Reward Factor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Overall Fit",
+              "displayName": "Overall Fit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Justification",
+              "displayName": "Justification",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -6048,
+        1072
+      ],
+      "id": "21613369-316d-4bb6-b7f6-ee193efdb869",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "x5SMLcuJp2Qvs0az",
+          "name": "Google Sheets account 2"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mimeType }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f02b7410-ef90-421e-b6ee-a2f2217411d2"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "word"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d4ead392-0f77-4e4a-a25e-ad2a47d97b40",
+                    "leftValue": "={{ $json.mimeType }}",
+                    "rightValue": "application/pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pdf"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7b154187-1017-4224-ab55-eb8be2a24c77",
+                    "leftValue": "={{ $json.mimeType }}",
+                    "rightValue": "application/vnd.google-apps.document",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "GoogleDoc"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -5376,
+        96
+      ],
+      "id": "044ccb53-40ac-45c7-a4c8-3014176ddf75",
+      "name": "Separate files route"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -4928,
+        -88
+      ],
+      "id": "df25e461-9ba5-4e36-9693-e0038b3c22bb",
+      "name": "Download Doc File",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -4704,
+        -88
+      ],
+      "id": "1e562c1c-669b-4093-9998-ad227f106e94",
+      "name": "Extract Doc file"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -4928,
+        312
+      ],
+      "id": "c832e672-dd4f-49fd-81af-4bb145347eff",
+      "name": "Download PDF File",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -4704,
+        312
+      ],
+      "id": "6a09700b-3c0e-471b-9450-61a5cb2270a6",
+      "name": "Extract PDF"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d767fbc6-a3b1-49ea-a2be-bfa18100a05e",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4480,
+        -88
+      ],
+      "id": "5de25397-6ad0-4b56-bfa2-97e12751ace1",
+      "name": "Merge Text All"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1dJpD6CcyvlAmmmuJK1kfboRuOFff9NVS",
+          "mode": "list",
+          "cachedResultName": "AI-Powered Business Automation Engineer.pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1dJpD6CcyvlAmmmuJK1kfboRuOFff9NVS/view?usp=drivesdk"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -4256,
+        -88
+      ],
+      "id": "de10e8e4-3bd9-4f92-a330-1174725acdc2",
+      "name": "Job Description Download",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -4032,
+        -88
+      ],
+      "id": "0c172185-5e6e-4744-85b0-e4b0b60c8611",
+      "name": "Extract Job Description"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Job Description: \n{{ $json.text }}\n\nCandidate's Resume:\n\n{{ $('Merge Text All').item.json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=# Overview\nYou are an expert recruiter specializing in AI, automation and business. You have been given a job description and a candidate resume. Your task is to analyze the resume in relation to the job description and provide a detailed screening report.\n\nFocus specifically on how well the candidate matches the core requirements and ideal profile outlined in the job description. Evaluate both technical skill alignment and business-context understanding. Use reasoning grounded in the actual content of the resume and job post. Do not make assumptions.\n\n## STEP 1: Extract Qualifications from Job Description (DO THIS FIRST)\n\nBefore analyzing the candidate, extract and list:\n\nREQUIRED QUALIFICATIONS (count each as 1):\n1. 3+ years business process automation experience\n2. AI/ML implementation experience\n3. Python programming\n4. JavaScript/Node.js\n5. RPA tools (UiPath, Automation Anywhere, etc.)\n6. API integrations and Webhook systems\n7. Process mining tools\n8. SQL & database operations\n\nTOTAL REQUIRED = 8\n\nPREFERRED QUALIFICATIONS (count each as 1):\n1. Vector databases (Pinecone, Weaviate)\n2. LangChain/LlamaIndex frameworks\n3. Business Process Management certification\n4. Predictive analytics experience\n5. Docker & containerization\n6. Cloud certifications (AWS, Azure, GCP)\n7. n8n/Make.com certifications\n8. Supply chain/logistics automation\n\nTOTAL PREFERRED = 8\n\n## STEP 2: Match Candidate Against Each Qualification\n\nFor EACH qualification above, check the resume and mark:\n- MET: Clear evidence in resume\n- NOT MET: No evidence in resume\n- PARTIAL: Some related experience but not exact match (count as NOT MET)\n\nBe strict. Only count as MET if there is explicit evidence in the resume.\n\n## STEP 3: Calculate Scores\n\nRequired Met = Count of MET from required list\nPreferred Met = Count of MET from preferred list\n\n## Scoring Rubric (MUST follow exactly)\n- 9-10: Meets ALL 8 required + 6+ preferred + exceeds experience requirements\n- 7-8: Meets ALL 8 required + 3-5 preferred\n- 5-6: Meets 6-7 required + some preferred\n- 3-4: Meets 4-5 required + significant gaps\n- 1-2: Meets 1-3 required + major misalignment\n- 0: Meets 0 required\n\n## Risk Factor Criteria\n- Low: Meets ALL required qualifications + has proven track record in identical role\n- Medium: Meets MOST required (6-7) + has transferable skills\n- High: Meets FEW required (5 or less) OR has red flags\n\n## Reward Factor Criteria\n- Low: Will meet basic expectations only, limited growth potential\n- Medium: Could grow into expanded role within 6-12 months\n- High: Could exceed expectations and add strategic value immediately\n\n## Output Format\n\nCandidate Strengths:\nList the top strengths or relevant qualifications the candidate brings to the table. Be specific.\n\nCandidate Weaknesses:\nList areas where the candidate is lacking or mismatched based on the job description.\n\nRisk Factor:\nAssign a risk score (Low / Medium / High) using the criteria above.\nExplain the worst-case scenario if this candidate is hired.\n\nReward Factor:\nAssign a reward score (Low / Medium / High) using the criteria above.\nDescribe the best-case scenario - what value could this candidate unlock?\nDoes the candidate appear to be a short-term or long-term fit?\n\nOverall Fit Rating (0-10):\nAssign a number between 0 (terrible match) and 10 (perfect match). Do not give decimals. Use the scoring rubric above.\n\nJustification for Rating:\nState: \"Required qualifications met: X/8. Preferred qualifications met: X/8.\"\nThen explain clearly why this candidate received that score. Reference specific resume content and how it aligns or doesn't with the job description.\n\n## STEP 4: Flag Ambiguous Areas\n\nIf a qualification is mentioned generically without specific evidence, add it to ambiguous_areas. Examples:\n- \"RPA tools\" without naming UiPath/Automation Anywhere → Flag as ambiguous\n- \"API experience\" without specific integration examples → Flag as ambiguous\n- \"Database experience\" without mentioning SQL specifically → Flag as ambiguous\n\nThese areas should be verified during interview. When scoring, count ambiguous items as NOT MET but flag them for HR review.\n```\n\nAnd add this to the Output Format section:\n```\nAmbiguous Areas:\nList any qualifications where the resume wording is generic or unclear. These need verification during interview.\n\n## STEP 5: Conservative Scoring Rule (CRITICAL)\n\nWhen evaluating qualifications:\n- If evidence is CLEAR and EXPLICIT → MET\n- If evidence is GENERIC, IMPLIED, or AMBIGUOUS → NOT MET (and add to ambiguous_areas)\n- When in doubt, ALWAYS mark as NOT MET\n\nExamples:\n- \"RPA tools\" without naming UiPath/Automation Anywhere → NOT MET\n- \"API experience\" without specific integration examples → NOT MET\n- \"Database work\" without mentioning SQL → NOT MET\n- \"Python programming\" explicitly stated → MET\n- \"Built automation using n8n\" → MET\n\nBE STRICT. Only count qualifications with explicit, clear evidence. This ensures consistent scoring across multiple analyses.\n\n## Job Description\n{{ $json.text }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -3808,
+        -192
+      ],
+      "id": "728644f0-a502-48d8-90be-4bd9c47c4b12",
+      "name": "Resume Analysis Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nfor (const item of $input.all()) {\n  const htmlContent = item.json.output;\n  \n  items.push({\n    json: {},\n    binary: {\n      file: await this.helpers.prepareBinaryData(\n        Buffer.from(htmlContent, 'utf-8'),\n        'index.html',\n        'text/html'\n      )\n    }\n  });\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3104,
+        -88
+      ],
+      "id": "ae763815-3c76-4f2d-a065-387734540174",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "Files",
+              "inputDataFieldName": "file"
+            },
+            {
+              "name": "marginTop",
+              "value": "0.5"
+            },
+            {
+              "name": "marginBottom",
+              "value": "0.5"
+            },
+            {
+              "name": "marginLeft",
+              "value": "0.4"
+            },
+            {
+              "name": "marginRight",
+              "value": "0.4"
+            },
+            {
+              "name": "printBackground",
+              "value": "true"
+            },
+            {
+              "name": "preferCssPageSize",
+              "value": "false"
+            },
+            {
+              "name": "scale",
+              "value": "1"
+            },
+            {
+              "name": "paperWidth",
+              "value": "8.27"
+            },
+            {
+              "name": "paperHeight",
+              "value": "11.69"
+            },
+            {
+              "name": "emulatedMediaType",
+              "value": "print"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2880,
+        -88
+      ],
+      "id": "071eed99-32a2-41cd-b5f9-ae69f65fae1e",
+      "name": "Convert to Binary"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eb584580-de5d-49cd-9e8b-85f339da88c6",
+        "responseMode": "responseNode",
+        "options": {
+          "binaryPropertyName": "file"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -6048,
+        1296
+      ],
+      "id": "7593d393-2a53-44cd-aa8b-0b5bbfeeca12",
+      "name": "Webhook",
+      "webhookId": "eb584580-de5d-49cd-9e8b-85f339da88c6",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2432,
+        -88
+      ],
+      "id": "57bc0d9c-ba81-4d53-9d28-c4eeff166493",
+      "name": "Share file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "Analysis",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1J5iT65-jyZ28eMAC-jS0LVKgTvZmSDNo",
+          "mode": "list",
+          "cachedResultName": "AI-Powered Business Automation Analysis",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1J5iT65-jyZ28eMAC-jS0LVKgTvZmSDNo"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2656,
+        -88
+      ],
+      "id": "bc03bc48-df7d-4b63-98ae-7f24a638935d",
+      "name": "Upload Analysis",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Resume",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Resume",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -6048,
+        112
+      ],
+      "id": "22ac0091-75e1-4bcf-a93f-eada5026d400",
+      "name": "On form submission",
+      "webhookId": "9ad4bc7e-a807-4f2f-8de0-23f529a9193d"
+    },
+    {
+      "parameters": {
+        "jsCode": "const binaryKeys = Object.keys(items[0].binary);\nconst result = [];\n\nfor (const key of binaryKeys) {\n  if (key.startsWith('Resume_')) {\n    result.push({\n      json: { fileName: items[0].binary[key].fileName },\n      binary: { file: items[0].binary[key] }\n    });\n  }\n}\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5824,
+        112
+      ],
+      "id": "103fca30-6b62-4646-ba7c-101a0001a393",
+      "name": "Split Files"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -3384,
+        32
+      ],
+      "id": "6b1229f5-1f57-4bff-b50e-4f70b745aeb9",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "Zc56ZK6mbkjupT3E",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate an HR screening report from resume\n\nCandidate: {{ $json.output.first_name }} {{ $json.output.last_name }}\nEmail: {{ $json.output.email }}\nResume: {{ $('Upload file').item.json.webViewLink }}\nDate: {{ $now.format('dd MMMM yyyy hh:mm a') }}\n\nJOB DESCRIPTION:\n{{ $('Extract Job Description').item.json.info.Title }}\n{{ $('Extract Job Description').item.json.text }}\nANALYSIS DATA:\nRequired Qualifications Met: {{ $json.output.required_qualifications_met }}\nPreferred Qualifications Met: {{ $json.output.preferred_qualifications_met }}\n\nStrengths:\n{{ $json.output.candidate_strengths.join('\\\\n- ') }}\n\nWeaknesses:\n{{ $json.output.candidate_weaknesses.join('\\\\n- ') }}\n\nAmbiguous Areas (Verify in Interview):\n{{ $json.output.ambiguous_areas.join('\\\\n- ') }}\n\nRisk Factor: {{ $json.output.risk_factor.score }}\nRisk Explanation: {{ $json.output.risk_factor.explanation }}\n\nReward Factor: {{ $json.output.reward_factor.score }}\nReward Explanation: {{ $json.output.reward_factor.explanation }}\n\nOverall Fit Rating: {{ $json.output.overall_fit_rating }} / 10\n\nJustification: {{ $json.output.justification_for_rating }}\n\nIMPORTANT: Include a disclaimer section at the bottom of the report stating: \"Note: Scores may vary by ±1 point for resumes containing ambiguous or generic wording. Ambiguous areas flagged above should be verified during the interview process. This report is generated by AI and should be used as a screening aid, not as a sole hiring decision tool.\"",
+        "options": {
+          "systemMessage": "You are an expert HR report designer for MA4 Ltd, a business automation consultancy. Your task is to generate a professional, executive-ready HTML candidate screening report.\n\n## INPUT DATA\nYou will receive candidate analysis data in this format:\n- Candidate Name\n- Email\n- Resume Link\n- Analysis Date\n- Required Qualifications Met (X/Y)\n- Preferred Qualifications Met (X/Y)\n- Strengths\n- Weaknesses\n- Risk Factor (Low/Medium/High) with explanation\n- Reward Factor (Low/Medium/High) with explanation\n- Overall Fit Rating (0-10)\n- Justification\n\n## OUTPUT REQUIREMENTS\nGenerate a COMPLETE, VALID HTML document with inline CSS styling. The report must be print-ready and optimized for PDF conversion (A4 size).\n\n## BRAND GUIDELINES - MA4 LTD\nUse these exact colors:\n- Primary Dark (headers, backgrounds): #1e3a5f\n- Accent Cyan (highlights, borders): #4fb3d9  \n- Accent Green (positive indicators): #8bc53f\n- Accent Orange (warnings, attention): #f7941d\n- Text Dark: #2d3748\n- Text Light: #718096\n- Background Light: #f8fafc\n- White: #ffffff\n\nFont Stack: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif\n\n## REPORT STRUCTURE (4-5 pages when printed)\n\n### PAGE 1: EXECUTIVE SUMMARY\n- MA4 Ltd logo placeholder (use text \"MA4 LTD\" styled as logo)\n- Report title: \"Candidate Screening Report\"\n- Candidate name prominently displayed\n- Position applied for (extract from job description)\n- Date of analysis\n- Qualification Match Summary: Required X/Y, Preferred X/Y\n- Large visual OVERALL FIT SCORE (circular gauge or prominent number display)\n- Quick verdict badge: \n  - Score 8-10: \"HIGHLY RECOMMENDED\" (green badge)\n  - Score 5-7: \"CONSIDER WITH RESERVATIONS\" (orange badge)\n  - Score 0-4: \"NOT RECOMMENDED\" (red badge)\n- 3-sentence executive summary\n\n### PAGE 2: CANDIDATE PROFILE & STRENGTHS\n- Section header with cyan accent bar\n- Candidate contact information box\n- Link to full resume\n- STRENGTHS section:\n  - Each strength as a styled card/box with green left border\n  - Icon placeholder (use ✓ checkmark)\n  - Clear, readable formatting\n\n### PAGE 3: AREAS OF CONCERN & RISK ANALYSIS  \n- WEAKNESSES section:\n  - Each weakness as a styled card with orange left border\n  - Icon placeholder (use ⚠ warning)\n- RISK ASSESSMENT box:\n  - Risk level indicator (Low/Medium/High) with appropriate color\n  - Worst-case scenario explanation\n\n### PAGE 4: OPPORTUNITY & REWARD ANALYSIS\n- REWARD ASSESSMENT box:\n  - Reward level indicator (Low/Medium/High) with appropriate color\n  - Best-case scenario explanation\n  - Long-term vs short-term fit indicator\n- VALUE PROPOSITION: What unique value could this candidate bring?\n\n### PAGE 5: RECOMMENDATION & NEXT STEPS\n- DETAILED JUSTIFICATION for the rating\n- RECOMMENDED INTERVIEW QUESTIONS (generate 3-5 based on weaknesses/gaps)\n- RED FLAGS TO PROBE (if any)\n- FINAL HIRING RECOMMENDATION box with clear verdict\n- Footer with MA4 Ltd branding and \"Powered by MA4 Automation\"\n\n## HTML/CSS REQUIREMENTS\n## CRITICAL CSS RESET (MUST INCLUDE)\n\nAlways start your HTML <style> section with this exact CSS:\n\n* {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n}\n@page {\n    size: A4;\n    margin: 0;\n}\n@media print {\n    body {\n        -webkit-print-color-adjust: exact;\n        print-color-adjust: exact;\n    }\n}\nbody {\n    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\n    background-color: #ffffff;\n    color: #2d3748;\n    line-height: 1.5;\n    padding: 20px;\n}\n\n## SPACING RULES\n\n- Maximum margin between sections: 20px\n- Card margin-bottom: 10px\n- Paragraph margin-bottom: 8px\n- Use padding: 15px for section containers\n- Page breaks must have: height: 0; margin: 0; padding: 0;\n\n1. Use inline CSS for all styling (required for PDF conversion)\n2. Set page size for A4 with @page and @media print rules\n3. Use page-break-before: always; for new pages\n4. Ensure all colors print correctly\n5. Use box-shadow and border-radius for modern card appearance\n6. Include proper spacing (padding/margins) for readability\n\n## OUTPUT FORMAT\nOutput ONLY the complete HTML code starting with <!DOCTYPE html> and ending with </html>. No explanations, no markdown code blocks, just pure HTML."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -3456,
+        -192
+      ],
+      "id": "e8268926-804c-44c8-ab8b-d04bde03a9f1",
+      "name": "Report Formatting Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -3800,
+        536
+      ],
+      "id": "986f0d40-d359-473c-91a4-93333f2554d9",
+      "name": "OpenRouter Chat Model3",
+      "credentials": {
+        "openRouterApi": {
+          "id": "Zc56ZK6mbkjupT3E",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"name\": \"resume_screening_evaluation\",\n  \"description\": \"Analyzes a candidate's resume against a job description and outputs strengths, weaknesses, risk/reward assessment, and an overall fit score.\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"first_name\": {\n      \"type\": \"string\",\n      \"description\": \"Candidate's first name extracted from resume.\"\n    },\n    \"last_name\": {\n      \"type\": \"string\",\n      \"description\": \"Candidate's last name extracted from resume.\"\n    },\n    \"email\": {\n      \"type\": \"string\",\n      \"description\": \"Candidate's email address extracted from resume.\"\n    },\n    \"candidate_strengths\": {\n      \"type\": \"array\",\n      \"description\": \"A list of specific strengths or qualifications that match the job description.\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"candidate_weaknesses\": {\n      \"type\": \"array\",\n      \"description\": \"A list of areas where the candidate falls short or lacks alignment with the job requirements.\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"ambiguous_areas\": {\n      \"type\": \"array\",\n      \"description\": \"A list of qualifications where resume wording is unclear or generic. HR should verify these during interview.\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"risk_factor\": {\n      \"type\": \"object\",\n      \"description\": \"An evaluation of the potential risks of hiring this candidate.\",\n      \"properties\": {\n        \"score\": {\n          \"type\": \"string\",\n          \"enum\": [\"Low\", \"Medium\", \"High\"],\n          \"description\": \"The risk level of hiring this candidate.\"\n        },\n        \"explanation\": {\n          \"type\": \"string\",\n          \"description\": \"A brief explanation of the worst-case scenario if the candidate is hired.\"\n        }\n      },\n      \"required\": [\"score\", \"explanation\"]\n    },\n    \"reward_factor\": {\n      \"type\": \"object\",\n      \"description\": \"An evaluation of the potential upside of hiring this candidate.\",\n      \"properties\": {\n        \"score\": {\n          \"type\": \"string\",\n          \"enum\": [\"Low\", \"Medium\", \"High\"],\n          \"description\": \"The reward level of hiring this candidate.\"\n        },\n        \"explanation\": {\n          \"type\": \"string\",\n          \"description\": \"A description of the best-case scenario and whether the candidate is a short-term or long-term fit.\"\n        }\n      },\n      \"required\": [\"score\", \"explanation\"]\n    },\n    \"required_qualifications_met\": {\n      \"type\": \"string\",\n      \"description\": \"Format: 'X/8' showing how many required qualifications candidate meets out of total required.\"\n    },\n    \"preferred_qualifications_met\": {\n      \"type\": \"string\",\n      \"description\": \"Format: 'X/8' showing how many preferred qualifications candidate meets out of total preferred.\"\n    },\n    \"overall_fit_rating\": {\n      \"type\": \"integer\",\n      \"description\": \"A rating from 0 to 10 indicating how well the candidate matches the job description.\",\n      \"minimum\": 0,\n      \"maximum\": 10\n    },\n    \"justification_for_rating\": {\n      \"type\": \"string\",\n      \"description\": \"A summary explaining why the candidate received the specific fit rating, referencing resume and job description alignment.\"\n    }\n  },\n  \"required\": [\n    \"first_name\",\n    \"last_name\",\n    \"email\",\n    \"candidate_strengths\",\n    \"candidate_weaknesses\",\n    \"ambiguous_areas\",\n    \"risk_factor\",\n    \"reward_factor\",\n    \"required_qualifications_met\",\n    \"preferred_qualifications_met\",\n    \"overall_fit_rating\",\n    \"justification_for_rating\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -3672,
+        536
+      ],
+      "id": "fb5dc761-1fcb-42b5-9a2d-cfde7aad6fa8",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d767fbc6-a3b1-49ea-a2be-bfa18100a05e",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4480,
+        312
+      ],
+      "id": "1d6cbeff-1fe0-41e0-998a-c7997d3f8a97",
+      "name": "Merge Text All1"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1dJpD6CcyvlAmmmuJK1kfboRuOFff9NVS",
+          "mode": "list",
+          "cachedResultName": "AI-Powered Business Automation Engineer.pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1dJpD6CcyvlAmmmuJK1kfboRuOFff9NVS/view?usp=drivesdk"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -4256,
+        312
+      ],
+      "id": "dd5cc4a4-5a71-40d5-8e91-b5ed9a529369",
+      "name": "Job Description Download1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -4032,
+        312
+      ],
+      "id": "c78f3dda-1166-4e72-bd64-a8db9a427a40",
+      "name": "Extract Job Description1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Job Description: \n{{ $json.text }}\n\nCandidate's Resume:\n\n{{ $('Merge Text All1').item.json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=# Overview\nYou are an expert recruiter specializing in AI, automation and business. You have been given a job description and a candidate resume. Your task is to analyze the resume in relation to the job description and provide a detailed screening report.\n\nFocus specifically on how well the candidate matches the core requirements and ideal profile outlined in the job description. Evaluate both technical skill alignment and business-context understanding. Use reasoning grounded in the actual content of the resume and job post. Do not make assumptions.\n\n## STEP 1: Extract Qualifications from Job Description (DO THIS FIRST)\n\nBefore analyzing the candidate, extract and list:\n\nREQUIRED QUALIFICATIONS (count each as 1):\n1. 3+ years business process automation experience\n2. AI/ML implementation experience\n3. Python programming\n4. JavaScript/Node.js\n5. RPA tools (UiPath, Automation Anywhere, etc.)\n6. API integrations and Webhook systems\n7. Process mining tools\n8. SQL & database operations\n\nTOTAL REQUIRED = 8\n\nPREFERRED QUALIFICATIONS (count each as 1):\n1. Vector databases (Pinecone, Weaviate)\n2. LangChain/LlamaIndex frameworks\n3. Business Process Management certification\n4. Predictive analytics experience\n5. Docker & containerization\n6. Cloud certifications (AWS, Azure, GCP)\n7. n8n/Make.com certifications\n8. Supply chain/logistics automation\n\nTOTAL PREFERRED = 8\n\n## STEP 2: Match Candidate Against Each Qualification\n\nFor EACH qualification above, check the resume and mark:\n- MET: Clear evidence in resume\n- NOT MET: No evidence in resume\n- PARTIAL: Some related experience but not exact match (count as NOT MET)\n\nBe strict. Only count as MET if there is explicit evidence in the resume.\n\n## STEP 3: Calculate Scores\n\nRequired Met = Count of MET from required list\nPreferred Met = Count of MET from preferred list\n\n## Scoring Rubric (MUST follow exactly)\n- 9-10: Meets ALL 8 required + 6+ preferred + exceeds experience requirements\n- 7-8: Meets ALL 8 required + 3-5 preferred\n- 5-6: Meets 6-7 required + some preferred\n- 3-4: Meets 4-5 required + significant gaps\n- 1-2: Meets 1-3 required + major misalignment\n- 0: Meets 0 required\n\n## Risk Factor Criteria\n- Low: Meets ALL required qualifications + has proven track record in identical role\n- Medium: Meets MOST required (6-7) + has transferable skills\n- High: Meets FEW required (5 or less) OR has red flags\n\n## Reward Factor Criteria\n- Low: Will meet basic expectations only, limited growth potential\n- Medium: Could grow into expanded role within 6-12 months\n- High: Could exceed expectations and add strategic value immediately\n\n## Output Format\n\nCandidate Strengths:\nList the top strengths or relevant qualifications the candidate brings to the table. Be specific.\n\nCandidate Weaknesses:\nList areas where the candidate is lacking or mismatched based on the job description.\n\nRisk Factor:\nAssign a risk score (Low / Medium / High) using the criteria above.\nExplain the worst-case scenario if this candidate is hired.\n\nReward Factor:\nAssign a reward score (Low / Medium / High) using the criteria above.\nDescribe the best-case scenario - what value could this candidate unlock?\nDoes the candidate appear to be a short-term or long-term fit?\n\nOverall Fit Rating (0-10):\nAssign a number between 0 (terrible match) and 10 (perfect match). Do not give decimals. Use the scoring rubric above.\n\nJustification for Rating:\nState: \"Required qualifications met: X/8. Preferred qualifications met: X/8.\"\nThen explain clearly why this candidate received that score. Reference specific resume content and how it aligns or doesn't with the job description.\n\n## STEP 4: Flag Ambiguous Areas\n\nIf a qualification is mentioned generically without specific evidence, add it to ambiguous_areas. Examples:\n- \"RPA tools\" without naming UiPath/Automation Anywhere → Flag as ambiguous\n- \"API experience\" without specific integration examples → Flag as ambiguous\n- \"Database experience\" without mentioning SQL specifically → Flag as ambiguous\n\nThese areas should be verified during interview. When scoring, count ambiguous items as NOT MET but flag them for HR review.\n```\n\nAnd add this to the Output Format section:\n```\nAmbiguous Areas:\nList any qualifications where the resume wording is generic or unclear. These need verification during interview.\n\n## STEP 5: Conservative Scoring Rule (CRITICAL)\n\nWhen evaluating qualifications:\n- If evidence is CLEAR and EXPLICIT → MET\n- If evidence is GENERIC, IMPLIED, or AMBIGUOUS → NOT MET (and add to ambiguous_areas)\n- When in doubt, ALWAYS mark as NOT MET\n\nExamples:\n- \"RPA tools\" without naming UiPath/Automation Anywhere → NOT MET\n- \"API experience\" without specific integration examples → NOT MET\n- \"Database work\" without mentioning SQL → NOT MET\n- \"Python programming\" explicitly stated → MET\n- \"Built automation using n8n\" → MET\n\nBE STRICT. Only count qualifications with explicit, clear evidence. This ensures consistent scoring across multiple analyses.\n\n## Job Description\n{{ $json.text }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -3808,
+        312
+      ],
+      "id": "036bf3f1-a8cd-4190-ac0d-26ab98ecfe44",
+      "name": "Resume Analysis Agent1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nfor (const item of $input.all()) {\n  const htmlContent = item.json.output;\n  \n  items.push({\n    json: {},\n    binary: {\n      file: await this.helpers.prepareBinaryData(\n        Buffer.from(htmlContent, 'utf-8'),\n        'index.html',\n        'text/html'\n      )\n    }\n  });\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3104,
+        312
+      ],
+      "id": "fd479a6f-a1e9-4f0c-90d3-60bac7ae3a38",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "Files",
+              "inputDataFieldName": "file"
+            },
+            {
+              "name": "marginTop",
+              "value": "0.5"
+            },
+            {
+              "name": "marginBottom",
+              "value": "0.5"
+            },
+            {
+              "name": "marginLeft",
+              "value": "0.4"
+            },
+            {
+              "name": "marginRight",
+              "value": "0.4"
+            },
+            {
+              "name": "printBackground",
+              "value": "true"
+            },
+            {
+              "name": "preferCssPageSize",
+              "value": "false"
+            },
+            {
+              "name": "scale",
+              "value": "1"
+            },
+            {
+              "name": "paperWidth",
+              "value": "8.27"
+            },
+            {
+              "name": "paperHeight",
+              "value": "11.69"
+            },
+            {
+              "name": "emulatedMediaType",
+              "value": "print"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2880,
+        312
+      ],
+      "id": "5ddb191a-1995-406b-a261-1add7c484289",
+      "name": "Convert to Binary1"
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2432,
+        312
+      ],
+      "id": "5063c511-a2b0-4b0d-9c50-3fc2f158f152",
+      "name": "Share file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "Analysis",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1J5iT65-jyZ28eMAC-jS0LVKgTvZmSDNo",
+          "mode": "list",
+          "cachedResultName": "AI-Powered Business Automation Analysis",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1J5iT65-jyZ28eMAC-jS0LVKgTvZmSDNo"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2656,
+        312
+      ],
+      "id": "4e2af8c2-ccec-4db7-a259-80cbb4eaf89b",
+      "name": "Upload Analysis1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -3384,
+        536
+      ],
+      "id": "dbb56451-5b89-45bc-919a-9eb021c7a5e2",
+      "name": "OpenRouter Chat Model4",
+      "credentials": {
+        "openRouterApi": {
+          "id": "Zc56ZK6mbkjupT3E",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate an HR screening report from resume\n\nCandidate: {{ $json.output.first_name }} {{ $json.output.last_name }}\nEmail: {{ $json.output.email }}\nResume: {{ $('Upload file').item.json.webViewLink }}\nDate: {{ $now.format('dd MMMM yyyy hh:mm a') }}\n\nJOB DESCRIPTION:\n{{ $('Extract Job Description1').item.json.info.Title }}\n{{ $('Extract Job Description1').item.json.text }}\nANALYSIS DATA:\nRequired Qualifications Met: {{ $json.output.required_qualifications_met }}\nPreferred Qualifications Met: {{ $json.output.preferred_qualifications_met }}\n\nStrengths:\n{{ $json.output.candidate_strengths.join('\\\\n- ') }}\n\nWeaknesses:\n{{ $json.output.candidate_weaknesses.join('\\\\n- ') }}\n\nAmbiguous Areas (Verify in Interview):\n{{ $json.output.ambiguous_areas.join('\\\\n- ') }}\n\nRisk Factor: {{ $json.output.risk_factor.score }}\nRisk Explanation: {{ $json.output.risk_factor.explanation }}\n\nReward Factor: {{ $json.output.reward_factor.score }}\nReward Explanation: {{ $json.output.reward_factor.explanation }}\n\nOverall Fit Rating: {{ $json.output.overall_fit_rating }} / 10\n\nJustification: {{ $json.output.justification_for_rating }}\n\nIMPORTANT: Include a disclaimer section at the bottom of the report stating: \"Note: Scores may vary by ±1 point for resumes containing ambiguous or generic wording. Ambiguous areas flagged above should be verified during the interview process. This report is generated by AI and should be used as a screening aid, not as a sole hiring decision tool.\"",
+        "options": {
+          "systemMessage": "You are an expert HR report designer for MA4 Ltd. Generate a professional HTML candidate screening report.\n\n## OUTPUT REQUIREMENTS\nYou MUST use the EXACT HTML template structure below. Only replace the placeholder content with actual data. DO NOT modify the CSS or HTML structure.\n\n## EXACT HTML TEMPLATE TO USE\n\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Candidate Screening Report</title>\n    <style>\n        * { margin: 0; padding: 0; box-sizing: border-box; }\n        @page { size: A4; margin: 0; }\n        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }\n        body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; background: #fff; color: #2d3748; line-height: 1.5; padding: 30px; }\n        .header { background: #1e3a5f; color: #fff; padding: 25px; text-align: center; border-radius: 8px; margin-bottom: 25px; }\n        .logo { font-size: 32px; font-weight: bold; margin-bottom: 5px; }\n        .title { font-size: 22px; margin-bottom: 10px; }\n        .candidate-name { font-size: 26px; font-weight: bold; color: #4fb3d9; }\n        .meta { font-size: 14px; margin-top: 10px; }\n        .score-section { text-align: center; margin: 25px 0; }\n        .score { font-size: 64px; font-weight: bold; color: #1e3a5f; }\n        .score-label { font-size: 14px; color: #718096; }\n        .badge { display: inline-block; padding: 10px 25px; border-radius: 25px; color: #fff; font-weight: bold; font-size: 14px; margin-top: 10px; }\n        .badge-green { background: #8bc53f; }\n        .badge-orange { background: #f7941d; }\n        .badge-red { background: #e53e3e; }\n        .summary-box { background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4fb3d9; }\n        .section-header { background: #1e3a5f; color: #fff; padding: 12px 20px; font-size: 16px; font-weight: bold; margin: 25px 0 15px 0; border-radius: 4px; }\n        .qual-summary { display: flex; justify-content: center; gap: 30px; margin: 20px 0; }\n        .qual-box { background: #f8fafc; padding: 15px 25px; border-radius: 8px; text-align: center; }\n        .qual-label { font-size: 12px; color: #718096; }\n        .qual-value { font-size: 24px; font-weight: bold; color: #1e3a5f; }\n        .card { background: #fff; padding: 12px 15px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #8bc53f; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }\n        .card-warning { border-left-color: #f7941d; }\n        .card-info { border-left-color: #4fb3d9; }\n        .risk-box { background: #fff8f0; padding: 15px; border-radius: 8px; border-left: 4px solid #f7941d; margin: 15px 0; }\n        .reward-box { background: #f0fff4; padding: 15px; border-radius: 8px; border-left: 4px solid #8bc53f; margin: 15px 0; }\n        .contact-box { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; }\n        .questions-list { padding-left: 20px; }\n        .questions-list li { margin-bottom: 8px; }\n        .final-box { background: #1e3a5f; color: #fff; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0; }\n        .disclaimer { font-size: 11px; color: #718096; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; }\n        .footer { text-align: center; font-size: 12px; color: #718096; margin-top: 20px; }\n        .page-break { page-break-before: always; height: 0; margin: 0; padding: 0; }\n    </style>\n</head>\n<body>\n    <div class=\"header\">\n        <div class=\"logo\">MA4 LTD</div>\n        <div class=\"title\">Candidate Screening Report</div>\n        <div class=\"candidate-name\">{{CANDIDATE_NAME}}</div>\n        <div class=\"meta\">Position: {{POSITION}} | Date: {{DATE}}</div>\n    </div>\n\n    <div class=\"qual-summary\">\n        <div class=\"qual-box\">\n            <div class=\"qual-label\">Required Met</div>\n            <div class=\"qual-value\">{{REQUIRED_MET}}</div>\n        </div>\n        <div class=\"qual-box\">\n            <div class=\"qual-label\">Preferred Met</div>\n            <div class=\"qual-value\">{{PREFERRED_MET}}</div>\n        </div>\n    </div>\n\n    <div class=\"score-section\">\n        <div class=\"score\">{{SCORE}}</div>\n        <div class=\"score-label\">Overall Fit Rating</div>\n        <div class=\"badge {{BADGE_CLASS}}\">{{VERDICT}}</div>\n    </div>\n\n    <div class=\"summary-box\">{{EXECUTIVE_SUMMARY}}</div>\n\n    <div class=\"page-break\"></div>\n\n    <div class=\"section-header\">Candidate Profile & Strengths</div>\n    <div class=\"contact-box\">\n        <strong>Email:</strong> {{EMAIL}}<br>\n        <strong>Resume:</strong> <a href=\"{{RESUME_LINK}}\">View Full Resume</a>\n    </div>\n    {{STRENGTHS_CARDS}}\n\n    <div class=\"page-break\"></div>\n\n    <div class=\"section-header\">Areas of Concern & Risk Analysis</div>\n    {{WEAKNESSES_CARDS}}\n    <div class=\"risk-box\">\n        <strong>Risk Level: {{RISK_LEVEL}}</strong><br>\n        {{RISK_EXPLANATION}}\n    </div>\n\n    <div class=\"page-break\"></div>\n\n    <div class=\"section-header\">Opportunity & Reward Analysis</div>\n    <div class=\"reward-box\">\n        <strong>Reward Level: {{REWARD_LEVEL}}</strong><br>\n        {{REWARD_EXPLANATION}}\n    </div>\n\n    <div class=\"section-header\">Ambiguous Areas (Verify in Interview)</div>\n    {{AMBIGUOUS_CARDS}}\n\n    <div class=\"page-break\"></div>\n\n    <div class=\"section-header\">Recommendation & Next Steps</div>\n    <div class=\"summary-box\">\n        <strong>Justification:</strong> {{JUSTIFICATION}}\n    </div>\n\n    <div class=\"section-header\">Recommended Interview Questions</div>\n    <ul class=\"questions-list\">{{INTERVIEW_QUESTIONS}}</ul>\n\n    <div class=\"section-header\">Red Flags to Probe</div>\n    <div class=\"card card-warning\">{{RED_FLAGS}}</div>\n\n    <div class=\"final-box\">\n        <strong>Final Hiring Recommendation</strong><br>\n        {{FINAL_RECOMMENDATION}}\n    </div>\n\n    <div class=\"disclaimer\">\n        Note: Scores may vary by ±1 point for resumes containing ambiguous or generic wording. Ambiguous areas flagged above should be verified during the interview process. This report is generated by AI and should be used as a screening aid, not as a sole hiring decision tool.\n    </div>\n\n    <div class=\"footer\">Powered by MA4 Automation</div>\n</body>\n</html>\n\n## INSTRUCTIONS\n\n1. Use the EXACT template above - do not modify CSS or structure\n2. Replace placeholders with actual data:\n   - {{CANDIDATE_NAME}} = First name + Last name\n   - {{POSITION}} = Extract from job description\n   - {{DATE}} = Analysis date\n   - {{REQUIRED_MET}} = e.g., \"6/8\"\n   - {{PREFERRED_MET}} = e.g., \"3/8\"\n   - {{SCORE}} = Overall fit rating number\n   - {{BADGE_CLASS}} = \"badge-green\" (8-10), \"badge-orange\" (5-7), \"badge-red\" (0-4)\n   - {{VERDICT}} = \"HIGHLY RECOMMENDED\", \"CONSIDER WITH RESERVATIONS\", or \"NOT RECOMMENDED\"\n   - {{EXECUTIVE_SUMMARY}} = 2-3 sentence summary\n   - {{EMAIL}} = Candidate email\n   - {{RESUME_LINK}} = Resume URL\n   - {{STRENGTHS_CARDS}} = Each strength as: <div class=\"card\">✓ Strength text</div>\n   - {{WEAKNESSES_CARDS}} = Each weakness as: <div class=\"card card-warning\">⚠ Weakness text</div>\n   - {{AMBIGUOUS_CARDS}} = Each item as: <div class=\"card card-info\">? Ambiguous area</div>\n   - {{RISK_LEVEL}} = Low/Medium/High\n   - {{RISK_EXPLANATION}} = Risk explanation text\n   - {{REWARD_LEVEL}} = Low/Medium/High\n   - {{REWARD_EXPLANATION}} = Reward explanation text\n   - {{JUSTIFICATION}} = Full justification text\n   - {{INTERVIEW_QUESTIONS}} = Each as: <li>Question text</li>\n   - {{RED_FLAGS}} = Red flags text\n   - {{FINAL_RECOMMENDATION}} = Final verdict\n\n3. Generate 3-5 relevant interview questions based on weaknesses\n4. Output ONLY the complete HTML - no explanations, no markdown\n\n## BADGE LOGIC\n- Score 8-10: badge-green + \"HIGHLY RECOMMENDED\"\n- Score 5-7: badge-orange + \"CONSIDER WITH RESERVATIONS\"\n- Score 0-4: badge-red + \"NOT RECOMMENDED\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -3456,
+        312
+      ],
+      "id": "7bef7130-c642-4f6b-bfb2-6759f1c9338d",
+      "name": "Report Formatting Agent1"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "'1J5iT65-jyZ28eMAC-jS0LVKgTvZmSDNo' in parents"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name,webViewLink,mimeType)"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -5824,
+        744
+      ],
+      "id": "a33ca9a4-a15b-4725-8341-75715312980a",
+      "name": "Download analysis files from drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const files = $input.first().json.files;\n\nreturn files.map(file => ({\n  json: file\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5600,
+        744
+      ],
+      "id": "a6f4360f-418f-4992-8c9e-2618105fae0f",
+      "name": "Split files"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -5376,
+        744
+      ],
+      "id": "5362c248-cc3c-4d95-8a49-7dd8ee4ee9d7",
+      "name": "Download individual files",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -5152,
+        744
+      ],
+      "id": "e93d11cd-d1be-48c0-af6c-8ac1332d3346",
+      "name": "Extract Text Analysis"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -4928,
+        744
+      ],
+      "id": "393880e6-d31a-48bb-8cb9-76909935a58f",
+      "name": "Aggregate complete report"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate a consolidated HR summary report from these candidate analysis reports:\n\n{{ $json.data.map(item => item.text).join('\\n\\n---NEXT CANDIDATE---\\n\\n') }}",
+        "options": {
+          "systemMessage": "You are an HR analyst for MA4 Ltd. Analyze candidate screening reports and produce a structured summary.\n\nIMPORTANT: Extract ACTUAL data from the reports - real names, emails, scores, and details. Do NOT use placeholder data.\n\nOUTPUT (Markdown):\n\n## 1. EXECUTIVE SUMMARY\n- Position: [from reports]\n- Analysis Date: [from reports]\n- Total Candidates Reviewed: [count]\n\n## 2. CANDIDATE RANKING\n\n| Rank | Name | Email | Score | Verdict | Key Remarks |\n|------|------|-------|-------|---------|-------------|\n| 1 | [actual name] | [actual email] | [X/10] | [verdict] | [1-2 sentences] |\n\n## 3. TOP 3 CANDIDATES\nBrief justification for each top candidate.\n\n## 4. OBSERVATIONS\n- Common Strengths\n- Common Gaps  \n- Final Hiring Recommendation\n\nVerdict options: HIGHLY RECOMMENDED / CONSIDER WITH RESERVATIONS / NOT RECOMMENDED\n\nOutput clean Markdown only. No explanations."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -4704,
+        744
+      ],
+      "id": "f1b5a69e-7b9b-43c9-a9bb-becbce913a78",
+      "name": "Summary report agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -4632,
+        968
+      ],
+      "id": "95c7bf14-5913-451e-89f4-e23b9e09e1b5",
+      "name": "OpenRouter Chat Model6",
+      "credentials": {
+        "openRouterApi": {
+          "id": "Zc56ZK6mbkjupT3E",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "options": {
+          "systemMessage": "You are an HTML formatter for MA4 Ltd. Convert the provided Markdown report into a professional branded HTML document.\n\nMA4 LTD BRAND:\n- Primary Dark: #1e3a5f\n- Accent Cyan: #4fb3d9  \n- Accent Green: #8bc53f\n- Accent Orange: #f7941d\n- Font: Arial, sans-serif\n\nSTYLING REQUIREMENTS:\n- Professional header with MA4 logo placeholder\n- Styled tables with alternating row colors\n- Color-coded verdict badges (green=HIRE, cyan=PROCEED, orange=CONSIDER)\n- Clean spacing and typography\n- Footer with \"Powered by MA4 Automation\"\n\nOutput ONLY complete HTML starting with <!DOCTYPE html>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -4352,
+        744
+      ],
+      "id": "9cca1a39-85ab-4599-ab60-a8edcb1f2efd",
+      "name": "Summary Report Formatting"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "Files",
+              "inputDataFieldName": "file"
+            },
+            {
+              "name": "marginTop",
+              "value": "0.3"
+            },
+            {
+              "name": "marginBottom",
+              "value": "0.3"
+            },
+            {
+              "name": "marginLeft",
+              "value": "0.3"
+            },
+            {
+              "name": "marginRight",
+              "value": "0.3"
+            },
+            {
+              "name": "printBackground",
+              "value": "true"
+            },
+            {
+              "name": "preferCssPageSize",
+              "value": "false"
+            },
+            {
+              "name": "scale",
+              "value": "0.75"
+            },
+            {
+              "name": "paperWidth",
+              "value": "8.27"
+            },
+            {
+              "name": "paperHeight",
+              "value": "11.69"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -3776,
+        744
+      ],
+      "id": "c7aaadfa-4d4a-40b1-9467-b5aca6d32df2",
+      "name": "Convert to Binary2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.output;\n\n// Clean markdown fences if present\nconst cleanHtml = html.replace(/```html\\n?/g, '').replace(/```\\n?/g, '').trim();\n\n// Convert to base64 for binary\nconst base64 = Buffer.from(cleanHtml).toString('base64');\n\nreturn {\n  json: {},\n  binary: {\n    file: {\n      data: base64,\n      mimeType: 'text/html',\n      fileName: 'index.html'\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4000,
+        744
+      ],
+      "id": "7db026b8-e2b9-4b82-9716-2463745e9305",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -2208,
+        112
+      ],
+      "id": "d3844f53-16eb-4afa-9537-181d3abe2286",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "pdf",
+        "name": "HR",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1vVG8E0b2mXOm_XxKMVy2aqQnysZ-9NjF",
+          "mode": "list",
+          "cachedResultName": "HR report",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1vVG8E0b2mXOm_XxKMVy2aqQnysZ-9NjF"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -3552,
+        744
+      ],
+      "id": "8943e831-ce7b-4a2f-a17c-1251e7fb6e83",
+      "name": "Upload file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AmG0tVdaL8SmnqWa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -6048,
+        744
+      ],
+      "id": "24d42365-1d38-4dc6-997a-40f1053c5acf",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Separate files route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to Doc": {
+      "main": [
+        [
+          {
+            "node": "Download Doc File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Resume Analysis Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Resume Analysis Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separate files route": {
+      "main": [
+        [
+          {
+            "node": "Convert to Doc",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download PDF File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Doc File": {
+      "main": [
+        [
+          {
+            "node": "Extract Doc file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Doc file": {
+      "main": [
+        [
+          {
+            "node": "Merge Text All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download PDF File": {
+      "main": [
+        [
+          {
+            "node": "Extract PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF": {
+      "main": [
+        [
+          {
+            "node": "Merge Text All1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Text All": {
+      "main": [
+        [
+          {
+            "node": "Job Description Download",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job Description Download": {
+      "main": [
+        [
+          {
+            "node": "Extract Job Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Job Description": {
+      "main": [
+        [
+          {
+            "node": "Resume Analysis Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Analysis Agent": {
+      "main": [
+        [
+          {
+            "node": "Report Formatting Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Convert to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to Binary": {
+      "main": [
+        [
+          {
+            "node": "Upload Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share file": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Analysis": {
+      "main": [
+        [
+          {
+            "node": "Share file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Split Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Files": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Report Formatting Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Formatting Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Resume Analysis Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Resume Analysis Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Text All1": {
+      "main": [
+        [
+          {
+            "node": "Job Description Download1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job Description Download1": {
+      "main": [
+        [
+          {
+            "node": "Extract Job Description1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Job Description1": {
+      "main": [
+        [
+          {
+            "node": "Resume Analysis Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Analysis Agent1": {
+      "main": [
+        [
+          {
+            "node": "Report Formatting Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Convert to Binary1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to Binary1": {
+      "main": [
+        [
+          {
+            "node": "Upload Analysis1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Analysis1": {
+      "main": [
+        [
+          {
+            "node": "Share file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Report Formatting Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Formatting Agent1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share file1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Download analysis files from drive": {
+      "main": [
+        [
+          {
+            "node": "Split files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split files": {
+      "main": [
+        [
+          {
+            "node": "Download individual files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download individual files": {
+      "main": [
+        [
+          {
+            "node": "Extract Text Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text Analysis": {
+      "main": [
+        [
+          {
+            "node": "Aggregate complete report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate complete report": {
+      "main": [
+        [
+          {
+            "node": "Summary report agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summary report agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Summary Report Formatting",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary report agent": {
+      "main": [
+        [
+          {
+            "node": "Summary Report Formatting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary Report Formatting": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Convert to Binary2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to Binary2": {
+      "main": [
+        [
+          {
+            "node": "Upload file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Download analysis files from drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "20dde99b-2224-466e-91f6-41dee1c1044b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "725f0c8dd9518df96cb7f8506fa76bd30c6b951e0b0d68936cb9180f73e3663c"
+  },
+  "id": "XIh9IFu6L66V8Kev",
+  "tags": []
+}
