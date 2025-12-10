@@ -1,4 +1,4 @@
-![HireWise AI Banner] (Hirewise Banner.png)
+![HireWise AI Banner](Hirewise%20Banner.png)
 
 > AI-Powered Resume Analysis & Candidate Screening — Make smarter hiring decisions with intelligent automation.
 
@@ -38,7 +38,7 @@ Upload resumes and job descriptions — get comprehensive candidate evaluations 
 
 ## 🔄 Workflow Architecture
 
-![HireWise AI Workflow] (Hirewise Workflow.png)
+![HireWise AI Workflow](Hirewise%20Workflow.png)
 
 ### Three Parallel Processing Paths
 
