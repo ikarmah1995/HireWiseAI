@@ -36,10 +36,21 @@ Upload resumes and job descriptions — get comprehensive candidate evaluations 
 
 ---
 
-## 🔄 Workflow Architecture
+## 🔄 How It Works
 
-![HireWise AI Workflow](Hirewise%20Workflow.png)
+![HireWise AI Process](CVinResultsout.png)
 
+Upload your candidate resumes — our AI analyzes them against your job description and delivers actionable insights.
+
+---
+
+## 📄 Sample Reports
+
+### Individual Candidate Analysis
+![Sample Individual Report](IndividualAnalysis.png)
+
+### Batch Comparison Summary
+![Sample Summary Report](Completereport.png)
 ### Three Parallel Processing Paths
 
 **Path 1: DOC/DOCX Processing**
@@ -165,18 +176,6 @@ Update the folder IDs and sheet IDs in these nodes:
 2. Click "Execute Workflow" on the summary path
 3. Generates comparative analysis of all candidates
 4. Summary PDF uploaded to Drive
-
----
-
-## 📊 Sample Output
-
-The workflow generates professional PDF reports containing:
-- Candidate contact information
-- Strengths aligned with job requirements
-- Identified weaknesses and gaps
-- Areas requiring interview verification
-- Risk/Reward assessment matrix
-- Overall fit score with detailed justification
 
 ---
 
