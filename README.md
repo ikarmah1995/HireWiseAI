@@ -38,7 +38,7 @@ Upload resumes and job descriptions — get comprehensive candidate evaluations 
 
 ## 🔄 How It Works
 
-![HireWise AI Process](CVinResultsout.png)
+![Sample Individual Report](Individual%20Analysis.png)
 
 Upload your candidate resumes — our AI analyzes them against your job description and delivers actionable insights.
 
@@ -47,10 +47,10 @@ Upload your candidate resumes — our AI analyzes them against your job descript
 ## 📄 Sample Reports
 
 ### Individual Candidate Analysis
-![Sample Individual Report](IndividualAnalysis.png)
+![Sample Summary Report](Complete%20report.png)
 
 ### Batch Comparison Summary
-![Sample Summary Report](Completereport.png)
+![HireWise AI Process](CVin%20Results%20out.png)
 ### Three Parallel Processing Paths
 
 **Path 1: DOC/DOCX Processing**
